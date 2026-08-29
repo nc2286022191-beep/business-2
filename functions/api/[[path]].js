@@ -45,6 +45,7 @@ export async function onRequest({ request, env }) {
   if (!env.DB) return fail('云端数据库尚未绑定，请联系总设计师完成部署。', 503)
   const url = new URL(request.url), path = url.pathname.replace(/^\/api/, '') || '/'
   if (request.method === 'GET' && path === '/me') { const user=await actor(request,env); return user ? json({user}) : fail('请先登录',401) }
+  if (request.method === 'GET' && path === '/orders') { const user=await actor(request,env); if(!user)return fail('请先登录',401); const query=user.role==='owner'?'SELECT o.id,o.order_no,o.stage,o.created_at,u.username,payload_json,calculation_json FROM orders o JOIN users u ON u.id=o.operator_id WHERE o.deleted_at IS NULL ORDER BY o.created_at DESC':'SELECT o.id,o.order_no,o.stage,o.created_at,? AS username,payload_json,calculation_json FROM orders o WHERE o.operator_id=? AND o.deleted_at IS NULL ORDER BY o.created_at DESC'; const rows=await env.DB.prepare(query).bind(...(user.role==='owner'?[]:[user.username,user.id])).all(); return json({orders:rows.results||[]}) }
   if (request.method !== 'POST') return fail('未找到接口',404)
   let body={}; try { body=await request.json() } catch { return fail('请求格式错误') }
   if (path === '/register') {
@@ -60,6 +61,7 @@ export async function onRequest({ request, env }) {
     if (!user || user.password_hash !== await digest(String(body.password||''),user.password_salt)) return fail('账号或密码错误。',401)
     return json({user:{username:user.username,role:user.role}},200,{'set-cookie':await issueSession(user.id,env)})
   }
+  if (path === '/logout') { const raw=cookie(request,'bw_session'); if(raw)await env.DB.prepare('DELETE FROM sessions WHERE token_hash=?').bind(await digest(raw,'business-2-session-v1')).run(); return json({ok:true},200,{'set-cookie':'bw_session=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0'}) }
   if (path === '/parse') return json({fields:parse(validText(body.message))})
   const user=await actor(request,env); if (!user) return fail('请先登录',401)
   if (path === '/calculate') { try { const result=calculate(body); if(user.role!=='owner'){ result.worker={final:'仅总设计师可见'}; result.difference='仅总设计师可见' } return json(result) } catch(e){ return fail(e.message) } }

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import './styles.css'
 
@@ -43,6 +43,7 @@ function calculate(fields, bossRatio, workerRatio) {
 }
 
 function App() {
+  const [user,setUser]=useState(null),[auth,setAuth]=useState({username:'',password:'',question:'',answer:''}),[authMode,setAuthMode]=useState('login'),[authMsg,setAuthMsg]=useState('')
   const [message, setMessage] = useState('')
   const [fields, setFields] = useState({})
   const [bossRatio, setBossRatio] = useState(defaults.bossRatio)
@@ -52,9 +53,13 @@ function App() {
   const runCalculation = () => setResult(calculate(fields, bossRatio, workerRatio))
   const customerText = result ? `【报价计算明细】\n老板（比例 ${bossRatio}）：\n${fields.hafu} ÷ ${bossRatio} × 100 = ${(fields.hafu / Number(bossRatio) * 100).toFixed(2)} 纯币\nAW：${fields.aw} × 0.7 = ${result.aw.toFixed(2)}\n红头红甲红包：${result.bossItems.toFixed(2)}\n老板到手：${result.bossFinal} 元\n\n如同意上架，请明确回复“可以上架”。` : '请先粘贴资料并填写比例。'
   const copy = async () => navigator.clipboard.writeText(customerText)
+  useEffect(()=>{fetch('/api/me').then(r=>r.ok?r.json():null).then(x=>setUser(x?.user||null)).catch(()=>{})},[])
+  const submitAuth=async()=>{const route=authMode==='login'?'/api/login':'/api/register';const r=await fetch(route,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(auth)}),x=await r.json();if(r.ok){setUser(x.user);setAuthMsg('登录成功。')}else setAuthMsg(x.error||'操作失败')}
+  const logout=async()=>{await fetch('/api/logout',{method:'POST'});setUser(null)}
 
   return <main>
     <header><p className="eyebrow">BUSINESS 2</p><h1>商行报价工作台</h1><p>粘贴资料、填写比例、生成客户报价。</p></header>
+    <section className="card">{user?<div className="section-title"><span>当前员工：<b>{user.username}</b>（{user.role}）</span><button className="secondary" onClick={logout}>退出</button></div>:<><h2>{authMode==='login'?'登录':'注册首个总设计师/员工'}</h2><div className="grid"><label>账号<input value={auth.username} onChange={e=>setAuth({...auth,username:e.target.value})}/></label><label>密码<input type="password" value={auth.password} onChange={e=>setAuth({...auth,password:e.target.value})}/></label>{authMode==='register'&&<><label>密保问题<input value={auth.question} onChange={e=>setAuth({...auth,question:e.target.value})}/></label><label>密保答案<input type="password" value={auth.answer} onChange={e=>setAuth({...auth,answer:e.target.value})}/></label></>}</div><button onClick={submitAuth}>{authMode==='login'?'登录':'注册'}</button><button className="secondary" onClick={()=>setAuthMode(authMode==='login'?'register':'login')}>{authMode==='login'?'没有账号？注册':'已有账号？登录'}</button><p className="notice">{authMsg||'首个注册账户将成为总设计师。'}</p></>}</section>
     <section className="card">
       <h2>1. 粘贴号主资料</h2>
       <textarea value={message} onChange={e => setMessage(e.target.value)} placeholder="把号主发来的整段资料直接粘贴到这里" />
