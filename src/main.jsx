@@ -47,8 +47,9 @@ function App() {
   const [fields, setFields] = useState({})
   const [bossRatio, setBossRatio] = useState(defaults.bossRatio)
   const [workerRatio, setWorkerRatio] = useState(defaults.workerRatio)
-  const result = useMemo(() => calculate(fields, bossRatio, workerRatio), [fields, bossRatio, workerRatio])
-  const organize = () => setFields(parseMessage(message))
+  const [result, setResult] = useState(null)
+  const organize = () => { setFields(parseMessage(message)); setResult(null) }
+  const runCalculation = () => setResult(calculate(fields, bossRatio, workerRatio))
   const customerText = result ? `【报价计算明细】\n老板（比例 ${bossRatio}）：\n${fields.hafu} ÷ ${bossRatio} × 100 = ${(fields.hafu / Number(bossRatio) * 100).toFixed(2)} 纯币\nAW：${fields.aw} × 0.7 = ${result.aw.toFixed(2)}\n红头红甲红包：${result.bossItems.toFixed(2)}\n老板到手：${result.bossFinal} 元\n\n如同意上架，请明确回复“可以上架”。` : '请先粘贴资料并填写比例。'
   const copy = async () => navigator.clipboard.writeText(customerText)
 
@@ -67,6 +68,7 @@ function App() {
         <label>老板比例<input type="number" value={bossRatio} onChange={e => setBossRatio(e.target.value)}/></label>
         <label>打手比例<input type="number" value={workerRatio} onChange={e => setWorkerRatio(e.target.value)}/></label>
       </div>
+      <button onClick={runCalculation}>计算报价</button>
     </section>
     <section className="card results">
       <h2>3. 计算结果</h2>
