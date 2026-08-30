@@ -58,11 +58,11 @@ function App() {
     const route = authMode === 'login' ? '/api/login' : authMode === 'reset' ? '/api/password-reset' : '/api/register'
     const body = authMode === 'reset' ? { username: auth.username, answer: auth.answer, newPassword: auth.newPassword } : auth
     try { const r = await fetch(route, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }); const x = await responseJson(r)
-      if (r.ok) { if (x.user) setUser(x.user); setAuthMsg(authMode === 'reset' ? '密码已重置，请用新密码登录。' : '登录成功。') } else setAuthMsg(x.error || '操作失败')
+      if (r.ok) { if (x.user) { setUser(x.user); setAppMsg('登录成功。') }; setAuthMsg(authMode === 'reset' ? '密码已重置，请用新密码登录。' : '登录成功。') } else setAuthMsg(x.error || '操作失败')
     } catch { setAuthMsg('网络连接异常，请稍后重试。') }
   }
   const lookupSecurityQuestion = async () => { const r = await fetch(`/api/security-question?username=${encodeURIComponent(auth.username)}`); const x = await r.json(); setSecurityQuestion(r.ok ? x.question : (x.error || '未找到密保问题')) }
-  const logout = async () => { await fetch('/api/logout', { method: 'POST' }); setUser(null); setTeam([]); setAppMsg('已退出登录。') }
+  const logout = async () => { await fetch('/api/logout', { method: 'POST' }); setUser(null); setTeam([]); setAuthMode('login'); setAppMsg('已退出登录。') }
   const loadTeam = async () => { const r = await fetch('/api/team'); const x = await r.json(); setTeam(x.members || []); if (!r.ok) setAppMsg(x.error || '无法读取团队信息') }
   const removeMember = async id => { if (!confirm('确定删除这个员工账号吗？此操作不会删除其已经上架的账单。')) return; const r = await fetch(`/api/team/${id}`, { method: 'DELETE' }); const x = await r.json(); if (r.ok) { setAppMsg('员工账号已删除。'); loadTeam() } else setAppMsg(x.error || '删除失败') }
   const listToWps = () => window.open('/api/wps.csv', '_blank')
