@@ -54,7 +54,7 @@ export async function onRequest({ request, env }) {
   let body={}; try { body=await request.json() } catch { return fail('请求格式错误') }
   if (path === '/register') {
     const username=validText(body.username,80), password=String(body.password||''), question=validText(body.question,200), answer=String(body.answer||'')
-    if (username.length<2 || password.length<8 || question.length<4 || answer.length<2) return fail('账号至少 2 位，密码至少 8 位，并完整设置密保。')
+    if (username.length<2 || password.length<7 || question.length<4 || answer.length<2) return fail('账号至少 2 位，密码至少 7 位，并完整设置密保。')
     const count=await env.DB.prepare('SELECT COUNT(*) AS count FROM users').first(), role=Number(count.count)===0?'owner':'staff'
     const passwordData=await passwordRecord(password), answerData=await passwordRecord(answer), userId=id()
     try { await env.DB.prepare('INSERT INTO users(id,username,role,password_salt,password_hash,security_question,security_answer_salt,security_answer_hash,created_at) VALUES(?,?,?,?,?,?,?,?,?)').bind(userId,username,role,passwordData.salt,passwordData.hash,question,answerData.salt,answerData.hash,now()).run() } catch { return fail('该账号已存在。') }
@@ -67,7 +67,7 @@ export async function onRequest({ request, env }) {
   }
   if (path === '/password-reset') {
     const username=validText(body.username,80), answer=String(body.answer||''), newPassword=String(body.newPassword||'')
-    if(newPassword.length<8)return fail('新密码至少 8 位。')
+    if(newPassword.length<7)return fail('新密码至少 7 位。')
     const user=await env.DB.prepare('SELECT * FROM users WHERE username=?').bind(username).first()
     if(!user || user.security_answer_hash!==await digest(answer,user.security_answer_salt))return fail('账号或密保答案错误。',401)
     const passwordData=await passwordRecord(newPassword)
