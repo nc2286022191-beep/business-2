@@ -1,5 +1,11 @@
 # Learning log
 
+## 2026-08-31 — Shared teams require durable scope records
+
+- Issue: per-user filters prevent coworkers from operating from the same source of truth, while unrestricted team views expose data across unrelated teams.
+- Correction: record a team group on users and newly created operational records, scope non-owner access to that group, and make the loss flow parse pasted source facts before its explicit save action.
+- Reusable lesson: collaboration permissions must be attached to durable records at creation time; derive previews automatically, but keep the financial write as a reviewable confirmation.
+
 ## 2026-08-30 — Separate financial facts by business purpose
 
 - Issue: mixing sold-order margin with leftover-asset loss in one daily ledger hides both the real sales profit and the source of the loss.

@@ -8,7 +8,8 @@ header { margin-bottom: 24px; }
 .workspace-nav button.active { background:#1769d8; color:#fff; box-shadow:0 3px 10px #1769d833; }
 .overview-actions { display:flex; flex-wrap:wrap; gap:10px; margin:18px 0; }
 .team-list { display:grid; gap:8px; }
-.team-row { display:grid; grid-template-columns:1fr auto auto auto; align-items:center; gap:12px; padding:12px; border:1px solid #dbe5f2; border-radius:10px; }
+.team-row { display:grid; grid-template-columns:1fr auto auto 72px auto; align-items:center; gap:12px; padding:12px; border:1px solid #dbe5f2; border-radius:10px; }
+.group-input { margin:0; padding:8px; }
 .eyebrow { color: #2274e0; font-weight: 800; letter-spacing: .14em; font-size: .78rem; margin: 0 0 8px; }
 h1 { margin: 0; font-size: clamp(2rem,5vw,3rem); } h2 { margin-top: 0; font-size: 1.08rem; }
 .card { background: #fff; border: 1px solid #dbe5f2; border-radius: 16px; padding: 20px; margin-top: 16px; box-shadow: 0 8px 26px #21456b0d; }
