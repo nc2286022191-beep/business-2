@@ -3,6 +3,12 @@
 body { margin: 0; }
 main { max-width: 880px; margin: 0 auto; padding: 42px 20px 60px; }
 header { margin-bottom: 24px; }
+.workspace-nav { display:flex; gap:8px; flex-wrap:wrap; margin:0 0 20px; padding:8px; background:#e8f0fb; border-radius:12px; }
+.workspace-nav button { background:transparent; color:#42617f; padding:9px 12px; font-size:.9rem; }
+.workspace-nav button.active { background:#1769d8; color:#fff; box-shadow:0 3px 10px #1769d833; }
+.overview-actions { display:flex; flex-wrap:wrap; gap:10px; margin:18px 0; }
+.team-list { display:grid; gap:8px; }
+.team-row { display:grid; grid-template-columns:1fr auto auto; align-items:center; gap:12px; padding:12px; border:1px solid #dbe5f2; border-radius:10px; }
 .eyebrow { color: #2274e0; font-weight: 800; letter-spacing: .14em; font-size: .78rem; margin: 0 0 8px; }
 h1 { margin: 0; font-size: clamp(2rem,5vw,3rem); } h2 { margin-top: 0; font-size: 1.08rem; }
 .card { background: #fff; border: 1px solid #dbe5f2; border-radius: 16px; padding: 20px; margin-top: 16px; box-shadow: 0 8px 26px #21456b0d; }
@@ -15,4 +21,4 @@ button:disabled { cursor: wait; opacity: .65; } button.text-button { background:
 .notice { color:#60718a; font-size:.86rem; margin:18px 3px; }
 .ledger-table { overflow-x:auto; margin:16px 0; border:1px solid #dbe5f2; border-radius:10px; } .ledger-head,.ledger-row { min-width:1040px; display:grid; grid-template-columns:90px 58px 95px 115px 100px 100px 70px 1fr 46px; gap:8px; align-items:center; padding:9px; } .ledger-head { background:#eef5ff; font-size:.82rem; font-weight:800; color:#42617f; } .ledger-row { border-top:1px solid #edf2f7; } .ledger-row input { margin:0; padding:8px; } .ledger-row strong { text-align:center; } button.read-button { padding:8px 4px; font-size:.78rem; }
 .listing-list { display:grid; gap:10px; } .listing-row { display:grid; grid-template-columns:1fr auto auto; gap:14px; align-items:center; border:1px solid #dbe5f2; border-radius:10px; padding:12px; } .listing-row span,.listing-row small { display:block; color:#57708e; margin-top:4px; } .listing-row strong { color:#1769d8; white-space:nowrap; }
-@media(max-width:620px){ .grid,.totals{grid-template-columns:1fr;} main{padding:28px 14px 44px;} }
+@media(max-width:620px){ .grid,.totals,.team-row{grid-template-columns:1fr;} main{padding:28px 14px 44px;} .workspace-nav{overflow-x:auto; flex-wrap:nowrap;} .workspace-nav button{white-space:nowrap;} }
