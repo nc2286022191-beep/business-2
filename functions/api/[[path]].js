@@ -44,16 +44,18 @@ function calculate(p) {
 export async function onRequest({ request, env }) {
   if (!env.DB) return fail('云端数据库尚未绑定，请联系总设计师完成部署。', 503)
   const url = new URL(request.url), path = url.pathname.replace(/^\/api/, '') || '/'
+  if (request.method === 'GET' && path === '/security-question') { const username=validText(url.searchParams.get('username'),80); if(!username)return fail('请先填写账号。'); const user=await env.DB.prepare('SELECT security_question FROM users WHERE username=?').bind(username).first(); return user ? json({question:user.security_question}) : fail('账号不存在。',404) }
   if (request.method === 'GET' && path === '/me') { const user=await actor(request,env); return user ? json({user}) : fail('请先登录',401) }
   if (request.method === 'GET' && path === '/orders') { const user=await actor(request,env); if(!user)return fail('请先登录',401); const query=user.role==='owner'?'SELECT o.id,o.order_no,o.stage,o.created_at,u.username,payload_json,calculation_json FROM orders o JOIN users u ON u.id=o.operator_id WHERE o.deleted_at IS NULL ORDER BY o.created_at DESC':'SELECT o.id,o.order_no,o.stage,o.created_at,? AS username,payload_json,calculation_json FROM orders o WHERE o.operator_id=? AND o.deleted_at IS NULL ORDER BY o.created_at DESC'; const rows=await env.DB.prepare(query).bind(...(user.role==='owner'?[]:[user.username,user.id])).all(); return json({orders:rows.results||[]}) }
   if (request.method === 'GET' && path === '/team') { const user=await actor(request,env); if(!user)return fail('请先登录',401); if(user.role!=='owner')return fail('仅总设计师可查看团队',403); const rows=await env.DB.prepare("SELECT u.id,u.username,u.role,u.created_at,COUNT(o.id) AS orders FROM users u LEFT JOIN orders o ON o.operator_id=u.id AND o.deleted_at IS NULL GROUP BY u.id ORDER BY u.created_at").all(); return json({members:rows.results||[]}) }
+  if (request.method === 'DELETE' && path.startsWith('/team/')) { const user=await actor(request,env); if(!user)return fail('请先登录',401); if(user.role!=='owner')return fail('仅总设计师可管理员工',403); const target=path.slice('/team/'.length); if(!target || target===user.id)return fail('不能删除当前总设计师账号。'); const found=await env.DB.prepare('SELECT id,role FROM users WHERE id=?').bind(target).first(); if(!found)return fail('员工不存在。',404); if(found.role==='owner')return fail('不能删除总设计师账号。'); await env.DB.prepare('DELETE FROM sessions WHERE user_id=?').bind(target).run(); await env.DB.prepare('DELETE FROM users WHERE id=?').bind(target).run(); return json({deleted:true}) }
   if (request.method === 'GET' && path === '/wps.csv') { const user=await actor(request,env); if(!user)return fail('请先登录',401); const rows=await env.DB.prepare(user.role==='owner'?'SELECT o.order_no,o.stage,o.payload_json,o.calculation_json,u.username FROM orders o JOIN users u ON u.id=o.operator_id WHERE o.deleted_at IS NULL ORDER BY json_extract(o.payload_json,\'$.hafu_m\') ASC':'SELECT o.order_no,o.stage,o.payload_json,o.calculation_json,? AS username FROM orders o WHERE o.operator_id=? AND o.deleted_at IS NULL ORDER BY json_extract(o.payload_json,\'$.hafu_m\') ASC').bind(...(user.role==='owner'?[]:[user.username,user.id])).all(); const esc=x=>'"'+String(x??'').replaceAll('"','""')+'"'; const head=['编号','纯币(m)','保险体负','比例','大区','登录方式','老板到手','打手到手','差值','皮肤','计费项','操作人']; const csv='\uFEFF'+[head,...(rows.results||[]).map(r=>{const p=JSON.parse(r.payload_json),c=JSON.parse(r.calculation_json);return[r.order_no,p.hafu_m,`${p.insurance||''}格/${p.stamina||''}`,`${p.boss_ratio||''}/${p.worker_ratio||''}`,p.region||'',p.login||'',c.boss?.final||'',c.worker?.final||'',c.difference||'',c.skins||'',c.item_note||'',r.username]})].map(a=>a.map(esc).join(',')).join('\r\n'); return new Response(csv,{headers:{'content-type':'text/csv; charset=utf-8','content-disposition':'attachment; filename="wps-listing.csv"'}}) }
   if (request.method !== 'POST') return fail('未找到接口',404)
   let body={}; try { body=await request.json() } catch { return fail('请求格式错误') }
   if (path === '/register') {
     const username=validText(body.username,80), password=String(body.password||''), question=validText(body.question,200), answer=String(body.answer||'')
     if (username.length<2 || password.length<8 || question.length<4 || answer.length<2) return fail('账号至少 2 位，密码至少 8 位，并完整设置密保。')
-    const count=await env.DB.prepare('SELECT COUNT(*) AS count FROM users').first(), role=count.count===0?'owner':(Number((await env.DB.prepare("SELECT COUNT(*) AS count FROM users WHERE role='supervisor'").first()).count)<3?'supervisor':'staff')
+    const count=await env.DB.prepare('SELECT COUNT(*) AS count FROM users').first(), role=Number(count.count)===0?'owner':'staff'
     const passwordData=await passwordRecord(password), answerData=await passwordRecord(answer), userId=id()
     try { await env.DB.prepare('INSERT INTO users(id,username,role,password_salt,password_hash,security_question,security_answer_salt,security_answer_hash,created_at) VALUES(?,?,?,?,?,?,?,?,?)').bind(userId,username,role,passwordData.salt,passwordData.hash,question,answerData.salt,answerData.hash,now()).run() } catch { return fail('该账号已存在。') }
     return json({user:{username,role}},200,{'set-cookie':await issueSession(userId,env)})
@@ -63,10 +65,20 @@ export async function onRequest({ request, env }) {
     if (!user || user.password_hash !== await digest(String(body.password||''),user.password_salt)) return fail('账号或密码错误。',401)
     return json({user:{username:user.username,role:user.role}},200,{'set-cookie':await issueSession(user.id,env)})
   }
+  if (path === '/password-reset') {
+    const username=validText(body.username,80), answer=String(body.answer||''), newPassword=String(body.newPassword||'')
+    if(newPassword.length<8)return fail('新密码至少 8 位。')
+    const user=await env.DB.prepare('SELECT * FROM users WHERE username=?').bind(username).first()
+    if(!user || user.security_answer_hash!==await digest(answer,user.security_answer_salt))return fail('账号或密保答案错误。',401)
+    const passwordData=await passwordRecord(newPassword)
+    await env.DB.prepare('UPDATE users SET password_salt=?,password_hash=? WHERE id=?').bind(passwordData.salt,passwordData.hash,user.id).run()
+    await env.DB.prepare('DELETE FROM sessions WHERE user_id=?').bind(user.id).run()
+    return json({reset:true})
+  }
   if (path === '/logout') { const raw=cookie(request,'bw_session'); if(raw)await env.DB.prepare('DELETE FROM sessions WHERE token_hash=?').bind(await digest(raw,'business-2-session-v1')).run(); return json({ok:true},200,{'set-cookie':'bw_session=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0'}) }
   if (path === '/parse') return json({fields:parse(validText(body.message))})
   const user=await actor(request,env); if (!user) return fail('请先登录',401)
   if (path === '/calculate') { try { const result=calculate(body); if(user.role!=='owner'){ result.worker={final:'仅总设计师可见'}; result.difference='仅总设计师可见' } return json(result) } catch(e){ return fail(e.message) } }
-  if (path === '/orders') { try { const result=calculate(body); const stage=body.stage==='已上架'?'已上架':'待号主确认'; const orderNo=validText(body.order_no,80)||'待定'; await env.DB.prepare('INSERT INTO orders(id,order_no,operator_id,stage,payload_json,calculation_json,created_at) VALUES(?,?,?,?,?,?,?)').bind(id(),orderNo,user.id,stage,JSON.stringify(body),JSON.stringify(result),now()).run(); return json({saved:true,stage}) } catch(e){return fail(e.message)} }
+  if (path === '/orders') { try { const result=calculate(body); const stage=body.stage==='已上架'?'已上架':'待号主确认'; const orderNo=validText(body.order_no,80)||'待定'; await env.DB.prepare('INSERT INTO orders(id,order_no,operator_id,stage,payload_json,calculation_json,created_at) VALUES(?,?,?,?,?,?,?)').bind(id(),orderNo,user.id,stage,JSON.stringify(body),JSON.stringify(result),now()).run(); return json({saved:true,stage,orderNo}) } catch(e){return fail(e.message)} }
   return fail('未找到接口',404)
 }
