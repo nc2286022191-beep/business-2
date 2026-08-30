@@ -10,6 +10,10 @@ function extract(message, label) {
   return match?.[1]?.trim() || ''
 }
 function parseNumber(value) { return Number(String(value || '').match(/\d+(?:\.\d+)?/)?.[0] || 0) }
+async function responseJson(response) {
+  const text = await response.text()
+  try { return JSON.parse(text) } catch { return { error: '云端服务暂时异常，请稍后重试。' } }
+}
 function parseMessage(message) {
   return {
     region: extract(message, '大区').replace(/qq/i, 'Q'), warehouse_m: parseNumber(extract(message, '仓库资产')),
@@ -53,8 +57,9 @@ function App() {
   const submitAuth = async () => {
     const route = authMode === 'login' ? '/api/login' : authMode === 'reset' ? '/api/password-reset' : '/api/register'
     const body = authMode === 'reset' ? { username: auth.username, answer: auth.answer, newPassword: auth.newPassword } : auth
-    const r = await fetch(route, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }); const x = await r.json()
-    if (r.ok) { if (x.user) setUser(x.user); setAuthMsg(authMode === 'reset' ? '密码已重置，请用新密码登录。' : '登录成功。') } else setAuthMsg(x.error || '操作失败')
+    try { const r = await fetch(route, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }); const x = await responseJson(r)
+      if (r.ok) { if (x.user) setUser(x.user); setAuthMsg(authMode === 'reset' ? '密码已重置，请用新密码登录。' : '登录成功。') } else setAuthMsg(x.error || '操作失败')
+    } catch { setAuthMsg('网络连接异常，请稍后重试。') }
   }
   const lookupSecurityQuestion = async () => { const r = await fetch(`/api/security-question?username=${encodeURIComponent(auth.username)}`); const x = await r.json(); setSecurityQuestion(r.ok ? x.question : (x.error || '未找到密保问题')) }
   const logout = async () => { await fetch('/api/logout', { method: 'POST' }); setUser(null); setTeam([]); setAppMsg('已退出登录。') }

@@ -7,7 +7,7 @@ const hex = bytes => [...new Uint8Array(bytes)].map(x => x.toString(16).padStart
 
 async function digest(value, salt) {
   const key = await crypto.subtle.importKey('raw', encoder.encode(value), 'PBKDF2', false, ['deriveBits'])
-  return hex(await crypto.subtle.deriveBits({ name: 'PBKDF2', salt: encoder.encode(salt), iterations: 210000, hash: 'SHA-256' }, key, 256))
+  return hex(await crypto.subtle.deriveBits({ name: 'PBKDF2', salt: encoder.encode(salt), iterations: 10000, hash: 'SHA-256' }, key, 256))
 }
 async function passwordRecord(password) { const salt = crypto.randomUUID(); return { salt, hash: await digest(password, salt) } }
 const validText = (value, max = 5000) => String(value ?? '').trim().slice(0, max)
