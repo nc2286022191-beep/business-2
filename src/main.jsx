@@ -134,13 +134,13 @@ function App() {
   const updateMember = async (id, change) => { const r = await fetch('/api/team/' + id, { method:'PUT', headers:{'content-type':'application/json'}, body:JSON.stringify(change) }); const x = await responseJson(r); if (r.ok) { setAppMsg('成员设置已更新。'); loadTeam() } else setAppMsg(x.error || '成员设置失败。') }
   const removeMember = async id => { if (!confirm('确定删除这个员工账号吗？此操作不会删除其已经上架的账单。')) return; const r = await fetch(`/api/team/${id}`, { method: 'DELETE' }); const x = await responseJson(r); if (r.ok) { setAppMsg('员工账号已删除。'); loadTeam() } else setAppMsg(x.error || '删除失败') }
 
-  const loadListings = async () => { if (!user) return; setListingsLoading(true); setListings(demoListings); setListingsLoading(false) }
+  const loadListings = async () => { if (!user) return; setListingsLoading(true); const r = await fetch('/api/listings'); const x = await responseJson(r); setListingsLoading(false); if (r.ok) setListings(x.listings || []); else setAppMsg(x.error || '无法读取资料库。') }
   useEffect(() => { if (user) { loadListings(); loadLedger(today()); loadShareLinks() } }, [user])
   const visibleListings = user?.role === 'owner' && inventoryOwnerFilter !== 'all' ? listings.filter(item => item.username === inventoryOwnerFilter) : listings
   const sellListing = async item => { if (!confirm(`确认 ${item.order_no} 已售出吗？该操作会自动转入今日利润账单，并从上架表移除。`)) return; const r = await fetch(`/api/orders/${item.source_order_id}/sell`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }); const x = await responseJson(r); if (r.ok) { setAppMsg(`${item.order_no} 已售出，已自动转入今日利润账单。`); loadListings(); if (ledgerOpen) loadLedger(ledgerDate) } else setAppMsg(x.error || '售出处理失败。') }
   const deleteListing = async item => { if (!confirm(`确认删除上架单 ${item.order_no} 吗？删除后不会出现在上架库或 WPS 表中。`)) return; const r = await fetch(`/api/orders/${item.source_order_id}`, { method: 'DELETE' }); const x = await responseJson(r); if (r.ok) { setAppMsg(`${item.order_no} 已删除。`); loadListings() } else setAppMsg(x.error || '删除上架单失败。') }
 
-  const listToWps = () => setAppMsg('学习版仅展示当前页面中的虚构演示资料，不导出真实记录。')
+  const listToWps = () => window.open('/api/wps.csv', '_blank')
   const downloadInventory = () => {
     const headers = ['序号','纯币(m)','保险/体负','打手比例','大区','登录方式','全包价格','红皮 / 刀皮 / 砖皮','AW','红甲','红头','45包','在线时间','绝密 KD','段位']
     const escapeHtml = value => String(value ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;')
@@ -153,9 +153,9 @@ function App() {
   }
   const updateLedgerRow = (index, key, value) => setLedgerRows(rows => rows.map((row, i) => i === index ? { ...row, [key]: value, ...(key === 'order_no' ? { source_order_id: '' } : {}) } : row))
   const ledgerTotals = ledgerRows.reduce((sum, row) => { const boss = Number(row.boss_final || 0), worker = Number(row.worker_final || 0); const present = row.order_no || row.hafu_m || boss || worker || row.note; return { orders: sum.orders + (present ? 1 : 0), hafu: sum.hafu + Number(row.hafu_m || 0), profit: sum.profit + worker - boss } }, { orders: 0, hafu: 0, profit: 0 })
-  const loadLedger = async () => { setLedgerRows(demoListings.map(({source_order_id,order_no,hafu_m,insurance_stamina,boss_final,worker_final,note}) => ({source_order_id,order_no,hafu_m,insurance_stamina,boss_final,worker_final,note}))); setLedgerSummary({historical_profit:0,loss:10,cumulative_profit:40,net_profit:30}) }
+  const loadLedger = async (date = ledgerDate) => { const r = await fetch(`/api/ledger?date=${encodeURIComponent(date)}`); const x = await responseJson(r); if (!r.ok) return setAppMsg(x.error || '无法读取差值表。'); setLedgerRows(x.entries.length ? x.entries.map(({ source_order_id, order_no, hafu_m, insurance_stamina, boss_final, worker_final, note }) => ({ source_order_id, order_no, hafu_m, insurance_stamina, boss_final, worker_final, note })) : [blankLedgerRow()]); setLedgerSummary(x.summary) }
   const openLedger = () => { setLedgerOpen(true); setTimeout(() => loadLedger(), 0) }
-  const loadLosses = async () => { setLossRows([{id:'demo-loss',loss_date:today(),order_no:'SIM-A-01',aw:8,six_head:2,six_armor:1,bag45:1,discounted_total:10.6,original_total:13.6,loss:3,note:'虚构演示资料'}]); setLossSummary({loss:3,cumulative_profit:40,net_profit:37}) }
+  const loadLosses = async (date = lossDate) => { const r = await fetch(`/api/losses?date=${encodeURIComponent(date)}`); const x = await responseJson(r); if (!r.ok) return setAppMsg(x.error || '无法读取剩余物资差额表。'); setLossRows(x.records || []); setLossSummary(x.summary || null) }
   const organizeLoss = () => { const next = parseLossMessage(lossMessage); setLossForm(next); setAppMsg(next.order_no || next.aw || next.six_head || next.six_armor || next.bag45 ? '剩余物资已识别，请核对后写入亏损表。' : '未识别到编号或物资数量，请按“编号：K170、AW：9、六头：6”格式粘贴。') }
   const lossPreview = { discounted_total: Number(lossForm.aw || 0) * .7 + Number(lossForm.six_head || 0) + Number(lossForm.six_armor || 0) * 2 + Number(lossForm.bag45 || 0) * 2, original_total: Number(lossForm.aw || 0) * .7 + Number(lossForm.six_head || 0) * 2 + Number(lossForm.six_armor || 0) * 2 + Number(lossForm.bag45 || 0) * 3 }
   lossPreview.loss = lossPreview.original_total - lossPreview.discounted_total
