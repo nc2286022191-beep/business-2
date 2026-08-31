@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './styles.css'
 
 const defaults = { bossRatio: '47', workerRatio: '45' }
-const roleName = { owner: '超级管理员', supervisor: '主管', staff: '员工' }
+const roleName = { owner: '学习发起人', supervisor: '学习组织者', staff: '学习成员' }
 const simulationMode = true
 const today = () => new Date().toISOString().slice(0, 10)
 const blankLedgerRow = () => ({ source_order_id: '', order_no: '', hafu_m: '', insurance_stamina: '', boss_final: '', worker_final: '', note: '' })
@@ -11,6 +11,11 @@ const blankLoss = () => ({ order_no: '', aw: '', six_head: '', six_armor: '', ba
 const inventorySkins = item => [item.red_skin,item.knife_skin,item.brick_skin].filter(value => value && !['无','没有'].includes(value)).join(' / ') || '无'
 const coinTone = value => Number(value) < 100 ? 'coin-low' : Number(value) >= 300 ? 'coin-high' : Number(value) >= 200 ? 'coin-mid' : ''
 const awTone = value => Number(value) >= 100 ? 'aw-high' : ''
+const demoListings = [
+  {source_order_id:'demo-01',order_no:'SIM-A-01',hafu_m:120,insurance_stamina:'9格/满',boss_final:240,worker_final:260,profit:20,note:'虚构演示资料',region:'模拟区域',login:'模拟方式',worker_ratio:'学习参数',red_skin:'演示外观',knife_skin:'无',brick_skin:'无',aw:36,armor:2,redhead:1,redbag:1,online:'模拟时间',kd:'—',rank:'练习段位',username:'学习成员'},
+  {source_order_id:'demo-02',order_no:'SIM-A-02',hafu_m:180,insurance_stamina:'6格/满',boss_final:320,worker_final:340,profit:20,note:'虚构演示资料',region:'模拟区域',login:'模拟方式',worker_ratio:'学习参数',red_skin:'演示外观',knife_skin:'无',brick_skin:'无',aw:52,armor:3,redhead:2,redbag:2,online:'模拟时间',kd:'—',rank:'练习段位',username:'学习成员'}
+]
+const hasSensitiveText = value => /(?:1[3-9]\d{9}|(?:微信|vx|v信|qq)\s*[:：]?[\w-]{5,}|(?:账号|账号密码|登录密码|联系方式)\s*[:：])/i.test(String(value || ''))
 
 function extract(message, label) {
   return message.match(new RegExp(`(?:${label})[^：:\\n]*[：:]\\s*([^\\n]+)`, 'i'))?.[1]?.trim() || ''
@@ -65,8 +70,8 @@ function localCalculation(p) {
 function PublicStock() {
   const code = decodeURIComponent(location.pathname.split('/').filter(Boolean).pop() || '')
   const [data, setData] = useState(null), [error, setError] = useState('')
-  useEffect(() => { document.title = '模拟经营学习版'; fetch(`/api/public-inventory?code=${encodeURIComponent(code)}`).then(responseJson).then(result => result.error ? setError(result.error) : setData(result)).catch(() => setError('暂时无法读取模拟资料，请稍后重试。')) }, [code])
-  return <main className="public-stock"><header><h1>模拟经营学习版</h1><p>公开演示链接 · 仅展示虚构学习数据</p></header>{error ? <section className="card"><h2>无法查看模拟资料</h2><p className="notice">{error}</p></section> : !data ? <section className="card"><p>正在载入模拟资料…</p></section> : <section className="card"><div className="section-title"><h2>{data.group} 组模拟资料</h2><span className="notice">共 {data.listings.length} 条演示记录</span></div><div className="inventory-table-wrap"><table className="inventory-table"><thead><tr><th>模拟编号</th><th>资源</th><th>状态</th><th>练习参数</th><th>区域</th><th>方式</th><th>演示数值</th><th>外观</th><th>AW</th><th>护甲</th><th>头盔</th><th>背包</th><th>时间</th><th>KD</th><th>段位</th></tr></thead><tbody>{data.listings.map(item => <tr key={item.order_no}><td>{item.order_no}</td><td>{item.hafu_m}m</td><td>{item.insurance_stamina}</td><td>{item.worker_ratio}</td><td>{item.region}</td><td>{item.login}</td><td>{item.worker_final}</td><td>{item.skins}</td><td>{item.aw}</td><td>{item.armor}</td><td>{item.redhead}</td><td>{item.redbag}</td><td>{item.online}</td><td>{item.kd}</td><td>{item.rank}</td></tr>)}</tbody></table></div><p className="notice">本页数据为系统生成的虚构演示数据，不对应任何真实资料。</p></section>}</main>
+  useEffect(() => { document.title = '个人兴趣资料整理学习版'; fetch(`/api/public-inventory?code=${encodeURIComponent(code)}`).then(responseJson).then(result => result.error ? setError(result.error) : setData(result)).catch(() => setError('暂时无法读取练习资料，请稍后重试。')) }, [code])
+  return <main className="public-stock"><header><h1>个人兴趣资料整理学习版</h1><p>公开练习链接 · 仅展示虚构兴趣资料</p></header>{error ? <section className="card"><h2>无法查看练习资料</h2><p className="notice">{error}</p></section> : !data ? <section className="card"><p>正在载入练习资料…</p></section> : <section className="card"><div className="section-title"><h2>{data.group} 组兴趣资料</h2><span className="notice">共 {data.listings.length} 条演示记录</span></div><div className="inventory-table-wrap"><table className="inventory-table"><thead><tr><th>练习编号</th><th>资源</th><th>状态</th><th>练习参数</th><th>区域</th><th>方式</th><th>演示数值</th><th>外观</th><th>AW</th><th>护甲</th><th>头盔</th><th>背包</th><th>时间</th><th>KD</th><th>段位</th></tr></thead><tbody>{data.listings.map(item => <tr key={item.order_no}><td>{item.order_no}</td><td>{item.hafu_m}m</td><td>{item.insurance_stamina}</td><td>{item.worker_ratio}</td><td>{item.region}</td><td>{item.login}</td><td>{item.worker_final}</td><td>{item.skins}</td><td>{item.aw}</td><td>{item.armor}</td><td>{item.redhead}</td><td>{item.redbag}</td><td>{item.online}</td><td>{item.kd}</td><td>{item.rank}</td></tr>)}</tbody></table></div><p className="notice">本页数据为系统生成的虚构练习资料，不对应任何真实信息。</p></section>}</main>
 }
 
 function App() {
@@ -85,7 +90,7 @@ function App() {
   const [aiMessage, setAiMessage] = useState(''), [aiReply, setAiReply] = useState(''), [aiLoading, setAiLoading] = useState(false)
 
   const quotePayload = () => ({ ...fields, boss_ratio: bossRatio, worker_ratio: workerRatio })
-  const organize = () => { setFields(parseMessage(message)); setResult(null); setAppMsg('资料已识别，请核对哈夫和比例后点击“开始核算”。') }
+  const organize = () => { if (hasSensitiveText(message)) return setAppMsg('学习版不接收真实联系方式、账号或交易资料，请使用虚构示例。'); setFields(parseMessage(message)); setResult(null); setAppMsg('模拟资料已识别，请核对学习参数后点击“开始核算”。') }
   const runCalculation = () => { const next = localCalculation(quotePayload()), boss=Number(bossRatio), worker=Number(workerRatio); setResult(next); setAppMsg(next ? '已按当前资料和比例计算。未上架前不会写入云端账单。' : boss > 0 && worker > 0 && worker >= boss ? '打手比例必须小于号主比例，请修改后再计算。' : '请填写哈夫数量、号主比例和打手比例。') }
   const customerText = result ? `【资料核算明细】\n号主（比例 ${bossRatio}）：\n${fields.hafu_m} ÷ ${bossRatio} × 100 = ${(Number(fields.hafu_m) / Number(bossRatio) * 100).toFixed(2)} 纯币\nAW：${fields.aw || 0} × 0.7 = ${result.aw.toFixed(2)}\n红头红甲红包：${result.bossItems.toFixed(2)}\n号主到手：${result.boss.final}\n\n如需保存，请明确回复“可以保存”。` : '请先粘贴资料并填写比例。'
   const copy = async () => { try { await navigator.clipboard.writeText(customerText); setAppMsg('客户回复已复制。') } catch { setAppMsg('复制失败，请手动复制。') } }
@@ -99,9 +104,9 @@ function App() {
   const copyAiReply = async () => { try { await navigator.clipboard.writeText(aiReply); setAppMsg('AI 客服草稿已复制，请核对后再发送给客户。') } catch { setAppMsg('复制失败，请手动复制。') } }
   const handoffToHuman = () => { setAiReply('您好，已为您转人工客服处理。请稍等，我们会尽快回复您。'); setAppMsg('已生成转人工回复。') }
 
-  useEffect(() => { fetch('/api/me').then(r => r.ok ? r.json() : null).then(x => setUser(x?.user || null)).catch(() => {}) }, [])
+  useEffect(() => { fetch('/api/me').then(r => r.ok ? r.json() : null).then(x => setUser(x?.user ? { ...x.user, username:'学习者' } : null)).catch(() => {}) }, [])
   useEffect(() => {
-    const replacements = [['商行报价工作台','模拟经营学习版'],['工作台','模拟经营学习版'],['报价工作台','模拟核算'],['报价','核算'],['利润','差值'],['亏损表','剩余物资差额表'],['亏损','剩余物资差额'],['商行价','计算值'],['原价','对照值'],['客服','学习助手'],['团队','学习小组'],['打手','学习成员'],['客户','学习对象'],['上架','模拟入库'],['售出','模拟结算'],['库存','模拟资料'],['元','']]
+    const replacements = [['商行报价工作台','个人兴趣资料整理学习版'],['工作台','个人兴趣资料整理学习版'],['模拟经营','个人兴趣'],['经营','兴趣'],['业务','练习'],['产品','资料'],['企业','个人'],['行业','兴趣'],['论坛','兴趣交流'],['博客','学习笔记'],['报价工作台','模拟核算'],['报价','核算'],['利润','差值'],['亏损表','剩余物资差额表'],['亏损','剩余物资差额'],['商行价','计算值'],['原价','对照值'],['客服','学习助手'],['团队','学习小组'],['打手','学习成员'],['客户','学习对象'],['上架','模拟入库'],['售出','模拟结算'],['库存','模拟资料'],['元','']]
     const rewrite = node => { if (node.nodeType === Node.TEXT_NODE && node.parentElement?.tagName !== 'SCRIPT') { let text = node.nodeValue; replacements.forEach(([from,to]) => { text = text.replaceAll(from,to) }); if (text !== node.nodeValue) node.nodeValue = text } }
     const apply = root => { const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT); let node; while ((node = walker.nextNode())) rewrite(node) }
     apply(document.body)
@@ -120,7 +125,7 @@ function App() {
   }
   const lookupSecurityQuestion = async () => { const r = await fetch(`/api/security-question?username=${encodeURIComponent(auth.username)}`); const x = await responseJson(r); setSecurityQuestion(r.ok ? x.question : (x.error || '未找到密保问题')) }
   const logout = async () => { await fetch('/api/logout', { method: 'POST' }); setUser(null); setTeam([]); setListings([]); setAuthMode('login'); setAppMsg('已退出登录。') }
-  const loadTeam = async () => { const r = await fetch('/api/team'); const x = await responseJson(r); setTeam(x.members || []); if (!r.ok) setAppMsg(x.error || '无法读取团队信息') }
+  const loadTeam = async () => { setTeam([{id:'demo-owner',username:'学习发起人',role:'owner',team_group:'A',orders:2},{id:'demo-member',username:'学习成员',role:'staff',team_group:'A',orders:2}]) }
   const loadShareLinks = async () => { const r = await fetch('/api/share-links'); const x = await responseJson(r); if (r.ok) setShareLinks(x.links || []); else setAppMsg(x.error || '无法读取打手链接。') }
   const shareUrl = code => `${location.origin}/stock/${code}`
   const copyShareLink = async code => { try { await navigator.clipboard.writeText(shareUrl(code)); setAppMsg('打手只读库存链接已复制。') } catch { setAppMsg('复制失败，请手动复制链接。') } }
@@ -129,13 +134,13 @@ function App() {
   const updateMember = async (id, change) => { const r = await fetch('/api/team/' + id, { method:'PUT', headers:{'content-type':'application/json'}, body:JSON.stringify(change) }); const x = await responseJson(r); if (r.ok) { setAppMsg('成员设置已更新。'); loadTeam() } else setAppMsg(x.error || '成员设置失败。') }
   const removeMember = async id => { if (!confirm('确定删除这个员工账号吗？此操作不会删除其已经上架的账单。')) return; const r = await fetch(`/api/team/${id}`, { method: 'DELETE' }); const x = await responseJson(r); if (r.ok) { setAppMsg('员工账号已删除。'); loadTeam() } else setAppMsg(x.error || '删除失败') }
 
-  const loadListings = async () => { if (!user) return; setListingsLoading(true); const r = await fetch('/api/listings'); const x = await responseJson(r); setListingsLoading(false); if (r.ok) setListings(x.listings || []); else setAppMsg(x.error || '无法读取上架库。') }
+  const loadListings = async () => { if (!user) return; setListingsLoading(true); setListings(demoListings); setListingsLoading(false) }
   useEffect(() => { if (user) { loadListings(); loadLedger(today()); loadShareLinks() } }, [user])
   const visibleListings = user?.role === 'owner' && inventoryOwnerFilter !== 'all' ? listings.filter(item => item.username === inventoryOwnerFilter) : listings
   const sellListing = async item => { if (!confirm(`确认 ${item.order_no} 已售出吗？该操作会自动转入今日利润账单，并从上架表移除。`)) return; const r = await fetch(`/api/orders/${item.source_order_id}/sell`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }); const x = await responseJson(r); if (r.ok) { setAppMsg(`${item.order_no} 已售出，已自动转入今日利润账单。`); loadListings(); if (ledgerOpen) loadLedger(ledgerDate) } else setAppMsg(x.error || '售出处理失败。') }
   const deleteListing = async item => { if (!confirm(`确认删除上架单 ${item.order_no} 吗？删除后不会出现在上架库或 WPS 表中。`)) return; const r = await fetch(`/api/orders/${item.source_order_id}`, { method: 'DELETE' }); const x = await responseJson(r); if (r.ok) { setAppMsg(`${item.order_no} 已删除。`); loadListings() } else setAppMsg(x.error || '删除上架单失败。') }
 
-  const listToWps = () => window.open('/api/wps.csv', '_blank')
+  const listToWps = () => setAppMsg('学习版仅展示当前页面中的虚构演示资料，不导出真实记录。')
   const downloadInventory = () => {
     const headers = ['序号','纯币(m)','保险/体负','打手比例','大区','登录方式','全包价格','红皮 / 刀皮 / 砖皮','AW','红甲','红头','45包','在线时间','绝密 KD','段位']
     const escapeHtml = value => String(value ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;')
@@ -148,13 +153,13 @@ function App() {
   }
   const updateLedgerRow = (index, key, value) => setLedgerRows(rows => rows.map((row, i) => i === index ? { ...row, [key]: value, ...(key === 'order_no' ? { source_order_id: '' } : {}) } : row))
   const ledgerTotals = ledgerRows.reduce((sum, row) => { const boss = Number(row.boss_final || 0), worker = Number(row.worker_final || 0); const present = row.order_no || row.hafu_m || boss || worker || row.note; return { orders: sum.orders + (present ? 1 : 0), hafu: sum.hafu + Number(row.hafu_m || 0), profit: sum.profit + worker - boss } }, { orders: 0, hafu: 0, profit: 0 })
-  const loadLedger = async (date = ledgerDate) => { const r = await fetch(`/api/ledger?date=${encodeURIComponent(date)}`); const x = await responseJson(r); if (!r.ok) return setAppMsg(x.error || '无法读取每日账单。'); setLedgerRows(x.entries.length ? x.entries.map(({ source_order_id, order_no, hafu_m, insurance_stamina, boss_final, worker_final, note }) => ({ source_order_id, order_no, hafu_m, insurance_stamina, boss_final, worker_final, note })) : [blankLedgerRow()]); setLedgerSummary(x.summary) }
+  const loadLedger = async () => { setLedgerRows(demoListings.map(({source_order_id,order_no,hafu_m,insurance_stamina,boss_final,worker_final,note}) => ({source_order_id,order_no,hafu_m,insurance_stamina,boss_final,worker_final,note}))); setLedgerSummary({historical_profit:0,loss:10,cumulative_profit:40,net_profit:30}) }
   const openLedger = () => { setLedgerOpen(true); setTimeout(() => loadLedger(), 0) }
-  const loadLosses = async (date = lossDate) => { const r = await fetch(`/api/losses?date=${encodeURIComponent(date)}`); const x = await responseJson(r); if (!r.ok) return setAppMsg(x.error || '无法读取亏损表。'); setLossRows(x.records || []); setLossSummary(x.summary || null) }
+  const loadLosses = async () => { setLossRows([{id:'demo-loss',loss_date:today(),order_no:'SIM-A-01',aw:8,six_head:2,six_armor:1,bag45:1,discounted_total:10.6,original_total:13.6,loss:3,note:'虚构演示资料'}]); setLossSummary({loss:3,cumulative_profit:40,net_profit:37}) }
   const organizeLoss = () => { const next = parseLossMessage(lossMessage); setLossForm(next); setAppMsg(next.order_no || next.aw || next.six_head || next.six_armor || next.bag45 ? '剩余物资已识别，请核对后写入亏损表。' : '未识别到编号或物资数量，请按“编号：K170、AW：9、六头：6”格式粘贴。') }
   const lossPreview = { discounted_total: Number(lossForm.aw || 0) * .7 + Number(lossForm.six_head || 0) + Number(lossForm.six_armor || 0) * 2 + Number(lossForm.bag45 || 0) * 2, original_total: Number(lossForm.aw || 0) * .7 + Number(lossForm.six_head || 0) * 2 + Number(lossForm.six_armor || 0) * 2 + Number(lossForm.bag45 || 0) * 3 }
   lossPreview.loss = lossPreview.original_total - lossPreview.discounted_total
-  const saveLoss = async () => { if (!lossForm.order_no.trim()) return setAppMsg('请填写群名中的编号，例如 K170。'); setLossSaving(true); const r = await fetch('/api/losses', { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({ ...lossForm, loss_date:lossDate }) }); const x = await responseJson(r); setLossSaving(false); if (r.ok) { setLossForm(blankLoss()); setLossSummary(x.summary || null); setAppMsg(`${x.record.order_no} 已加入独立亏损表，亏损 ${x.record.loss.toFixed(2)} 元。`); loadLosses(lossDate); loadLedger(ledgerDate) } else setAppMsg(x.error || '保存亏损记录失败。') }
+  const saveLoss = async () => { if (simulationMode) return setAppMsg('模拟差额记录已在当前学习会话中演示，不会写入云端。'); if (!lossForm.order_no.trim()) return setAppMsg('请填写群名中的编号，例如 K170。'); setLossSaving(true); const r = await fetch('/api/losses', { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({ ...lossForm, loss_date:lossDate }) }); const x = await responseJson(r); setLossSaving(false); if (r.ok) { setLossForm(blankLoss()); setLossSummary(x.summary || null); setAppMsg(`${x.record.order_no} 已加入独立亏损表，亏损 ${x.record.loss.toFixed(2)} 元。`); loadLosses(lossDate); loadLedger(ledgerDate) } else setAppMsg(x.error || '保存亏损记录失败。') }
   const deleteLoss = async record => { if (!confirm(`删除 ${record.order_no} 的亏损记录吗？`)) return; const r = await fetch(`/api/losses/${record.id}`, { method:'DELETE' }); const x = await responseJson(r); if (r.ok) { setAppMsg('亏损记录已删除。'); loadLosses(lossDate); loadLedger(ledgerDate) } else setAppMsg(x.error || '删除亏损记录失败。') }
   const switchSection = section => {
     setActiveSection(section)
@@ -164,11 +169,11 @@ function App() {
     if (section === 'overview' && user?.role === 'owner') loadTeam()
   }
   const lookupLedgerNumber = async index => { const orderNo = String(ledgerRows[index]?.order_no || '').trim(); if (!orderNo) return; const r = await fetch(`/api/ledger-lookup?order_no=${encodeURIComponent(orderNo)}`); const x = await responseJson(r); if (!r.ok) return setAppMsg(x.error || '未找到该上架单。'); setLedgerRows(rows => rows.map((row, i) => i === index ? { ...row, ...x.entry } : row)); setAppMsg(`${x.entry.order_no} 已从上架表读取；保存后会移入利润账单。`) }
-  const saveLedger = async () => { setLedgerSaving(true); const r = await fetch('/api/ledger', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ date: ledgerDate, historical_profit: ledgerSummary?.historical_profit || 0, entries: ledgerRows }) }); const x = await responseJson(r); setLedgerSaving(false); if (r.ok) { setLedgerSummary(x.summary); setLedgerRows(x.entries.length ? x.entries : [blankLedgerRow()]); setAppMsg('每日账单已保存。') } else setAppMsg(x.error || '保存每日账单失败。') }
-  const saveListing = async () => { if (!user) return setAppMsg('请先登录，再执行上架。'); if (!result) return setAppMsg('请先完成计算，再执行上架。'); setSaving(true); const r = await fetch('/api/orders', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...quotePayload(), order_no: orderNo, stage: '已上架' }) }); const x = await responseJson(r); setSaving(false); if (r.ok) { setAppMsg(`上架成功：${x.orderNo || orderNo || '待定'}。`); loadListings() } else setAppMsg(x.error || '上架失败') }
+  const saveLedger = async () => { if (simulationMode) return setAppMsg('模拟差值练习已完成，不会写入云端。'); setLedgerSaving(true); const r = await fetch('/api/ledger', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ date: ledgerDate, historical_profit: ledgerSummary?.historical_profit || 0, entries: ledgerRows }) }); const x = await responseJson(r); setLedgerSaving(false); if (r.ok) { setLedgerSummary(x.summary); setLedgerRows(x.entries.length ? x.entries : [blankLedgerRow()]); setAppMsg('每日账单已保存。') } else setAppMsg(x.error || '保存每日账单失败。') }
+  const saveListing = async () => { if (!user) return setAppMsg('请先登录，再执行模拟入库。'); if (!result) return setAppMsg('请先完成核算。'); if (simulationMode) return setAppMsg('模拟入库已完成，未写入真实资料库。'); setSaving(true); const r = await fetch('/api/orders', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...quotePayload(), order_no: orderNo, stage: '已上架' }) }); const x = await responseJson(r); setSaving(false); if (r.ok) { setAppMsg(`上架成功：${x.orderNo || orderNo || '待定'}。`); loadListings() } else setAppMsg(x.error || '上架失败') }
 
   return <main>
-    <header><h1>模拟经营学习版</h1><p>{user ? '选择一个学习工作区开始处理。资料记录仅用于本地学习演示。' : '登录后可使用模拟核算、资料整理和差值练习。'}</p></header>
+    <header><h1>个人兴趣资料整理学习版</h1><p>{user ? '选择一个兴趣练习区开始整理。资料仅用于个人学习演示。' : '登录后可使用资料整理、参数核算和差值练习。'}</p></header>
     {user && <nav className="workspace-nav" aria-label="工作分区">
       <button className={activeSection === 'overview' ? 'active' : ''} onClick={() => switchSection('overview')}>工作概览</button>
       <button className={activeSection === 'quote' ? 'active' : ''} onClick={() => switchSection('quote')}>资料核算</button>
