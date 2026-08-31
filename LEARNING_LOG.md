@@ -1,5 +1,11 @@
 # Learning log
 
+## 2026-08-31 — Show each audience the business value they use
+
+- Issue: the inventory table showed the seller ratio even though workers use the worker ratio to evaluate an available order.
+- Correction: expose only `worker_ratio` in internal inventory, downloaded inventory, WPS export, and the public worker view; validate that the worker ratio is lower than the seller ratio before any calculation or order save.
+- Reusable lesson: label and expose fields by their operational consumer, then enforce the corresponding financial relationship on both the browser and server.
+
 ## 2026-08-31 — Live sharing must be read-only and revocable
 
 - Issue: a downloaded spreadsheet becomes stale immediately, while sharing the internal workspace would expose edit controls and financial data.
