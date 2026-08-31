@@ -1,5 +1,11 @@
 # Learning log
 
+## 2026-08-31 — Live sharing must be read-only and revocable
+
+- Issue: a downloaded spreadsheet becomes stale immediately, while sharing the internal workspace would expose edit controls and financial data.
+- Correction: create a separate public read-only inventory view scoped to one team group, backed by the same live listing data. Use a random `xiaokashanghang` link code and allow the link to be closed from the internal inventory page.
+- Reusable lesson: share a minimal projection of live data, not the operational back office; every external link should have a narrow scope and a revocation path.
+
 ## 2026-08-31 — Shared teams require durable scope records
 
 - Issue: per-user filters prevent coworkers from operating from the same source of truth, while unrestricted team views expose data across unrelated teams.
