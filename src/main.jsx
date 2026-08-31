@@ -4,6 +4,7 @@ import './styles.css'
 
 const defaults = { bossRatio: '47', workerRatio: '45' }
 const roleName = { owner: '超级管理员', supervisor: '主管', staff: '员工' }
+const simulationMode = true
 const today = () => new Date().toISOString().slice(0, 10)
 const blankLedgerRow = () => ({ source_order_id: '', order_no: '', hafu_m: '', insurance_stamina: '', boss_final: '', worker_final: '', note: '' })
 const blankLoss = () => ({ order_no: '', aw: '', six_head: '', six_armor: '', bag45: '', note: '' })
@@ -64,8 +65,8 @@ function localCalculation(p) {
 function PublicStock() {
   const code = decodeURIComponent(location.pathname.split('/').filter(Boolean).pop() || '')
   const [data, setData] = useState(null), [error, setError] = useState('')
-  useEffect(() => { fetch(`/api/public-inventory?code=${encodeURIComponent(code)}`).then(responseJson).then(result => result.error ? setError(result.error) : setData(result)).catch(() => setError('暂时无法读取库存表，请稍后重试。')) }, [code])
-  return <main className="public-stock"><header><h1>打手库存表</h1><p>只读实时库存 · 自动同步上架库</p></header>{error ? <section className="card"><h2>无法查看库存表</h2><p className="notice">{error}</p></section> : !data ? <section className="card"><p>正在读取库存表…</p></section> : <section className="card"><div className="section-title"><h2>{data.group} 组库存</h2><span className="notice">共 {data.listings.length} 单</span></div><div className="inventory-table-wrap"><table className="inventory-table"><thead><tr><th>序号</th><th>纯币(m)</th><th>保险/体负</th><th>打手比例</th><th>大区</th><th>登录方式</th><th>全包价格</th><th>红皮 / 刀皮 / 砖皮</th><th>AW</th><th>红甲</th><th>红头</th><th>45包</th><th>在线时间</th><th>绝密 KD</th><th>段位</th></tr></thead><tbody>{data.listings.length ? data.listings.map(item => <tr key={item.order_no}><td>{item.order_no}</td><td className={coinTone(item.hafu_m)}>{item.hafu_m}</td><td>{item.insurance_stamina}</td><td>{item.worker_ratio || '—'}</td><td>{item.region || '—'}</td><td>{item.login || '—'}</td><td>{item.worker_final}</td><td>{item.skins}</td><td className={awTone(item.aw)}>{item.aw}</td><td>{item.armor}</td><td>{item.redhead}</td><td>{item.redbag}</td><td>{item.online || '—'}</td><td>{item.kd || '—'}</td><td>{item.rank || '—'}</td></tr>) : <tr><td className="inventory-empty" colSpan="15">当前没有待售上架单</td></tr>}</tbody></table></div><p className="notice">此页面仅供查看，售出或删除后会自动同步更新。</p></section>}</main>
+  useEffect(() => { document.title = '模拟经营学习版'; fetch(`/api/public-inventory?code=${encodeURIComponent(code)}`).then(responseJson).then(result => result.error ? setError(result.error) : setData(result)).catch(() => setError('暂时无法读取模拟资料，请稍后重试。')) }, [code])
+  return <main className="public-stock"><header><h1>模拟经营学习版</h1><p>公开演示链接 · 仅展示虚构学习数据</p></header>{error ? <section className="card"><h2>无法查看模拟资料</h2><p className="notice">{error}</p></section> : !data ? <section className="card"><p>正在载入模拟资料…</p></section> : <section className="card"><div className="section-title"><h2>{data.group} 组模拟资料</h2><span className="notice">共 {data.listings.length} 条演示记录</span></div><div className="inventory-table-wrap"><table className="inventory-table"><thead><tr><th>模拟编号</th><th>资源</th><th>状态</th><th>练习参数</th><th>区域</th><th>方式</th><th>演示数值</th><th>外观</th><th>AW</th><th>护甲</th><th>头盔</th><th>背包</th><th>时间</th><th>KD</th><th>段位</th></tr></thead><tbody>{data.listings.map(item => <tr key={item.order_no}><td>{item.order_no}</td><td>{item.hafu_m}m</td><td>{item.insurance_stamina}</td><td>{item.worker_ratio}</td><td>{item.region}</td><td>{item.login}</td><td>{item.worker_final}</td><td>{item.skins}</td><td>{item.aw}</td><td>{item.armor}</td><td>{item.redhead}</td><td>{item.redbag}</td><td>{item.online}</td><td>{item.kd}</td><td>{item.rank}</td></tr>)}</tbody></table></div><p className="notice">本页数据为系统生成的虚构演示数据，不对应任何真实资料。</p></section>}</main>
 }
 
 function App() {
@@ -100,7 +101,7 @@ function App() {
 
   useEffect(() => { fetch('/api/me').then(r => r.ok ? r.json() : null).then(x => setUser(x?.user || null)).catch(() => {}) }, [])
   useEffect(() => {
-    const replacements = [['商行报价工作台','工作台'],['报价工作台','资料核算'],['报价','核算'],['利润','差值'],['亏损表','剩余物资差额表'],['亏损','剩余物资差额'],['商行价','计算值'],['原价','对照值'],['客服','助手'],['上架库','资料库'],['元','']]
+    const replacements = [['商行报价工作台','模拟经营学习版'],['工作台','模拟经营学习版'],['报价工作台','模拟核算'],['报价','核算'],['利润','差值'],['亏损表','剩余物资差额表'],['亏损','剩余物资差额'],['商行价','计算值'],['原价','对照值'],['客服','学习助手'],['团队','学习小组'],['打手','学习成员'],['客户','学习对象'],['上架','模拟入库'],['售出','模拟结算'],['库存','模拟资料'],['元','']]
     const rewrite = node => { if (node.nodeType === Node.TEXT_NODE && node.parentElement?.tagName !== 'SCRIPT') { let text = node.nodeValue; replacements.forEach(([from,to]) => { text = text.replaceAll(from,to) }); if (text !== node.nodeValue) node.nodeValue = text } }
     const apply = root => { const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT); let node; while ((node = walker.nextNode())) rewrite(node) }
     apply(document.body)
@@ -109,6 +110,7 @@ function App() {
     return () => observer.disconnect()
   }, [])
   const submitAuth = async () => {
+    if (simulationMode && authMode === 'register') return setAuthMsg('模拟经营学习版暂不开放自助注册。')
     const route = authMode === 'login' ? '/api/login' : authMode === 'reset' ? '/api/password-reset' : '/api/register'
     const body = authMode === 'reset' ? { username: auth.username, answer: auth.answer, newPassword: auth.newPassword } : auth
     try {
@@ -166,11 +168,11 @@ function App() {
   const saveListing = async () => { if (!user) return setAppMsg('请先登录，再执行上架。'); if (!result) return setAppMsg('请先完成计算，再执行上架。'); setSaving(true); const r = await fetch('/api/orders', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...quotePayload(), order_no: orderNo, stage: '已上架' }) }); const x = await responseJson(r); setSaving(false); if (r.ok) { setAppMsg(`上架成功：${x.orderNo || orderNo || '待定'}。`); loadListings() } else setAppMsg(x.error || '上架失败') }
 
   return <main>
-    <header><h1>工作台</h1><p>{user ? '选择一个工作区开始处理。资料记录会自动保留在云端。' : '登录后可使用资料核算、资料库和每日记录。'}</p></header>
+    <header><h1>模拟经营学习版</h1><p>{user ? '选择一个学习工作区开始处理。资料记录仅用于本地学习演示。' : '登录后可使用模拟核算、资料整理和差值练习。'}</p></header>
     {user && <nav className="workspace-nav" aria-label="工作分区">
       <button className={activeSection === 'overview' ? 'active' : ''} onClick={() => switchSection('overview')}>工作概览</button>
       <button className={activeSection === 'quote' ? 'active' : ''} onClick={() => switchSection('quote')}>资料核算</button>
-      <button className={activeSection === 'ai' ? 'active' : ''} onClick={() => switchSection('ai')}>AI 助手</button>
+      {!simulationMode && <button className={activeSection === 'ai' ? 'active' : ''} onClick={() => switchSection('ai')}>AI 助手</button>}
       <button className={activeSection === 'inventory' ? 'active' : ''} onClick={() => switchSection('inventory')}>资料库{listings.length ? ` · ${listings.length}` : ''}</button>
       <button className={activeSection === 'ledger' ? 'active' : ''} onClick={() => switchSection('ledger')}>差值表</button>
       <button className={activeSection === 'loss' ? 'active' : ''} onClick={() => switchSection('loss')}>剩余物资差额表</button>
