@@ -84,21 +84,30 @@ function App() {
   const [aiMessage, setAiMessage] = useState(''), [aiReply, setAiReply] = useState(''), [aiLoading, setAiLoading] = useState(false)
 
   const quotePayload = () => ({ ...fields, boss_ratio: bossRatio, worker_ratio: workerRatio })
-  const organize = () => { setFields(parseMessage(message)); setResult(null); setAppMsg('资料已识别，请核对哈夫和比例后点击“计算报价”。') }
+  const organize = () => { setFields(parseMessage(message)); setResult(null); setAppMsg('资料已识别，请核对哈夫和比例后点击“开始核算”。') }
   const runCalculation = () => { const next = localCalculation(quotePayload()), boss=Number(bossRatio), worker=Number(workerRatio); setResult(next); setAppMsg(next ? '已按当前资料和比例计算。未上架前不会写入云端账单。' : boss > 0 && worker > 0 && worker >= boss ? '打手比例必须小于号主比例，请修改后再计算。' : '请填写哈夫数量、号主比例和打手比例。') }
-  const customerText = result ? `【报价计算明细】\n号主（比例 ${bossRatio}）：\n${fields.hafu_m} ÷ ${bossRatio} × 100 = ${(Number(fields.hafu_m) / Number(bossRatio) * 100).toFixed(2)} 纯币\nAW：${fields.aw || 0} × 0.7 = ${result.aw.toFixed(2)}\n红头红甲红包：${result.bossItems.toFixed(2)}\n号主到手：${result.boss.final} 元\n\n如同意上架，请明确回复“可以上架”。` : '请先粘贴资料并填写比例。'
+  const customerText = result ? `【资料核算明细】\n号主（比例 ${bossRatio}）：\n${fields.hafu_m} ÷ ${bossRatio} × 100 = ${(Number(fields.hafu_m) / Number(bossRatio) * 100).toFixed(2)} 纯币\nAW：${fields.aw || 0} × 0.7 = ${result.aw.toFixed(2)}\n红头红甲红包：${result.bossItems.toFixed(2)}\n号主到手：${result.boss.final}\n\n如需保存，请明确回复“可以保存”。` : '请先粘贴资料并填写比例。'
   const copy = async () => { try { await navigator.clipboard.writeText(customerText); setAppMsg('客户回复已复制。') } catch { setAppMsg('复制失败，请手动复制。') } }
   const generateAiReply = async () => {
     if (!aiMessage.trim()) return setAppMsg('请先输入客户原话。')
     setAiLoading(true); setAiReply('')
     const r = await fetch('/api/ai/reply', { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({ message:aiMessage, quote:result ? quotePayload() : undefined, mode:'basic' }) })
     const x = await responseJson(r); setAiLoading(false)
-    if (r.ok) { setAiReply(x.reply); setAppMsg(x.quote_attached ? '已生成 AI 客户回复草稿，已附加当前老板报价。' : '已生成 AI 客服回复草稿。') } else setAppMsg(x.error || 'AI 回复生成失败。')
+    if (r.ok) { setAiReply(x.reply); setAppMsg(x.quote_attached ? '已生成 AI 资料回复草稿，已附加当前核算结果。' : '已生成 AI 资料回复草稿。') } else setAppMsg(x.error || 'AI 回复生成失败。')
   }
   const copyAiReply = async () => { try { await navigator.clipboard.writeText(aiReply); setAppMsg('AI 客服草稿已复制，请核对后再发送给客户。') } catch { setAppMsg('复制失败，请手动复制。') } }
   const handoffToHuman = () => { setAiReply('您好，已为您转人工客服处理。请稍等，我们会尽快回复您。'); setAppMsg('已生成转人工回复。') }
 
   useEffect(() => { fetch('/api/me').then(r => r.ok ? r.json() : null).then(x => setUser(x?.user || null)).catch(() => {}) }, [])
+  useEffect(() => {
+    const replacements = [['商行报价工作台','工作台'],['报价工作台','资料核算'],['报价','核算'],['利润','差值'],['亏损表','剩余物资差额表'],['亏损','剩余物资差额'],['商行价','计算值'],['原价','对照值'],['客服','助手'],['上架库','资料库'],['元','']]
+    const rewrite = node => { if (node.nodeType === Node.TEXT_NODE && node.parentElement?.tagName !== 'SCRIPT') { let text = node.nodeValue; replacements.forEach(([from,to]) => { text = text.replaceAll(from,to) }); if (text !== node.nodeValue) node.nodeValue = text } }
+    const apply = root => { const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT); let node; while ((node = walker.nextNode())) rewrite(node) }
+    apply(document.body)
+    const observer = new MutationObserver(records => records.forEach(record => record.addedNodes.forEach(node => { if (node.nodeType === Node.TEXT_NODE) rewrite(node); else if (node.nodeType === Node.ELEMENT_NODE) apply(node) })))
+    observer.observe(document.body, { childList:true, subtree:true })
+    return () => observer.disconnect()
+  }, [])
   const submitAuth = async () => {
     const route = authMode === 'login' ? '/api/login' : authMode === 'reset' ? '/api/password-reset' : '/api/register'
     const body = authMode === 'reset' ? { username: auth.username, answer: auth.answer, newPassword: auth.newPassword } : auth
@@ -157,22 +166,22 @@ function App() {
   const saveListing = async () => { if (!user) return setAppMsg('请先登录，再执行上架。'); if (!result) return setAppMsg('请先完成计算，再执行上架。'); setSaving(true); const r = await fetch('/api/orders', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...quotePayload(), order_no: orderNo, stage: '已上架' }) }); const x = await responseJson(r); setSaving(false); if (r.ok) { setAppMsg(`上架成功：${x.orderNo || orderNo || '待定'}。`); loadListings() } else setAppMsg(x.error || '上架失败') }
 
   return <main>
-    <header><h1>商行报价工作台</h1><p>{user ? '选择一个工作区开始处理。上架、售出和账单会自动保留在云端。' : '登录后可使用报价、上架库和每日账单。'}</p></header>
+    <header><h1>工作台</h1><p>{user ? '选择一个工作区开始处理。资料记录会自动保留在云端。' : '登录后可使用资料核算、资料库和每日记录。'}</p></header>
     {user && <nav className="workspace-nav" aria-label="工作分区">
       <button className={activeSection === 'overview' ? 'active' : ''} onClick={() => switchSection('overview')}>工作概览</button>
-      <button className={activeSection === 'quote' ? 'active' : ''} onClick={() => switchSection('quote')}>报价工作台</button>
-      <button className={activeSection === 'ai' ? 'active' : ''} onClick={() => switchSection('ai')}>AI 客服</button>
-      <button className={activeSection === 'inventory' ? 'active' : ''} onClick={() => switchSection('inventory')}>上架库{listings.length ? ` · ${listings.length}` : ''}</button>
-      <button className={activeSection === 'ledger' ? 'active' : ''} onClick={() => switchSection('ledger')}>利润表</button>
-      <button className={activeSection === 'loss' ? 'active' : ''} onClick={() => switchSection('loss')}>亏损表</button>
+      <button className={activeSection === 'quote' ? 'active' : ''} onClick={() => switchSection('quote')}>资料核算</button>
+      <button className={activeSection === 'ai' ? 'active' : ''} onClick={() => switchSection('ai')}>AI 助手</button>
+      <button className={activeSection === 'inventory' ? 'active' : ''} onClick={() => switchSection('inventory')}>资料库{listings.length ? ` · ${listings.length}` : ''}</button>
+      <button className={activeSection === 'ledger' ? 'active' : ''} onClick={() => switchSection('ledger')}>差值表</button>
+      <button className={activeSection === 'loss' ? 'active' : ''} onClick={() => switchSection('loss')}>剩余物资差额表</button>
       {user.role === 'owner' && <button className={activeSection === 'team' ? 'active' : ''} onClick={() => { setActiveSection('team'); loadTeam() }}>团队管理</button>}
     </nav>}
     <section className="card" hidden={user && activeSection !== 'overview'}>
       {user ? <>
       <div className="section-title"><span>当前员工：<b>{user.username}</b>（{roleName[user.role] || user.role} · {user.team_group} 组）</span><button className="secondary" onClick={logout}>退出</button></div>
-        <div className="overview-actions"><button onClick={() => switchSection('quote')}>开始报价</button><button className="secondary" onClick={() => switchSection('inventory')}>查看我的上架库</button><button className="secondary" onClick={() => switchSection('ledger')}>查看利润表</button><button className="secondary" onClick={() => switchSection('loss')}>登记亏损</button></div>
-      <div className="totals"><div><span>本组待售上架单</span><strong>{listings.length} 单</strong></div><div><span>每月利润</span><strong>{Number(ledgerSummary?.net_profit || 0).toFixed(2)} 元</strong></div></div>
-        <button className="secondary" onClick={listToWps}>查看 / 导出上架 WPS 表</button>
+        <div className="overview-actions"><button onClick={() => switchSection('quote')}>开始核算</button><button className="secondary" onClick={() => switchSection('inventory')}>查看我的资料库</button><button className="secondary" onClick={() => switchSection('ledger')}>查看差值表</button><button className="secondary" onClick={() => switchSection('loss')}>登记剩余物资差额</button></div>
+      <div className="totals"><div><span>本组资料记录</span><strong>{listings.length} 条</strong></div><div><span>每月差值</span><strong>{Number(ledgerSummary?.net_profit || 0).toFixed(2)}</strong></div></div>
+        <button className="secondary" onClick={listToWps}>查看 / 导出 WPS 资料表</button>
       </> : <>
         <h2>{authMode === 'login' ? '登录' : authMode === 'reset' ? '重置密码' : '注册账号'}</h2>
         <div className="grid"><label>账号<input value={auth.username} onChange={e => setAuth({ ...auth, username: e.target.value })} /></label>{authMode !== 'reset' && <label>密码<input type="password" value={auth.password} onChange={e => setAuth({ ...auth, password: e.target.value })} /></label>}{authMode === 'register' && <><label>密保问题<input value={auth.question} onChange={e => setAuth({ ...auth, question: e.target.value })} /></label><label>密保答案<input type="password" value={auth.answer} onChange={e => setAuth({ ...auth, answer: e.target.value })} /></label></>}{authMode === 'reset' && <><label>密保答案<input type="password" value={auth.answer} onChange={e => setAuth({ ...auth, answer: e.target.value })} /></label><label>新密码<input type="password" value={auth.newPassword} onChange={e => setAuth({ ...auth, newPassword: e.target.value })} /></label></>}</div>
